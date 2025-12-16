@@ -1,26 +1,9 @@
-/*
-export async function login(nombre, password, tipo) {
-  let baseUrl = "";
-  let endpoint = "";
+// src/Service/login.js
+import { API_AUTH_BASE, apiFetch } from "./apiHelper";
 
-  if (tipo === "CLIENTE") {
-    baseUrl = "http://localhost:8080";
-    endpoint = "/api/cliente/login";
-  } else if (tipo === "EMPLEADO") {
-    baseUrl = "http://localhost:9090/api/empleados/login";
-   
-  }
-
-  const res = await fetch(`${baseUrl}${endpoint}`, {
+export async function login(data) {
+  return apiFetch(`${API_AUTH_BASE}/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nombre, password }),
+    body: JSON.stringify(data),
   });
-
-  if (!res.ok) {
-    throw new Error("Error en login");
-  }
-
-  return res.json();
 }
-  */
