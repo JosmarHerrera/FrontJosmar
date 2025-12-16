@@ -18,14 +18,9 @@ export const ReservaComponent = () => {
   const { user } = useAuth();
   const roles = user?.roles || [];
 
-  const esCliente =
-    roles.includes("ROLE_CLIENTE") || roles.includes("CLIENTE");
+  const esCliente = roles.includes("ROLE_CLIENTE") || roles.includes("CLIENTE");
 
-  const nombreUsuarioLower = (
-    user?.username ||
-    user?.nombre ||
-    ""
-  ).toLowerCase();
+  const nombreUsuarioLower = (user?.username || user?.nombre || "").toLowerCase();
 
   // Datos
   const [reservas, setReservas] = useState([]);
@@ -86,6 +81,18 @@ export const ReservaComponent = () => {
     return ahora.getTime() >= fechaReserva.getTime();
   };
 
+  // ====== NUEVO: normalizar texto y soportar búsqueda por fecha "12-12-2025" ======
+  const onlyDigits = (s) => String(s || "").replace(/\D/g, "");
+
+  const dateISOToDDMMYYYY = (iso) => {
+    // iso esperado "YYYY-MM-DD"
+    if (!iso || typeof iso !== "string" || iso.length < 10) return "";
+    const y = iso.slice(0, 4);
+    const m = iso.slice(5, 7);
+    const d = iso.slice(8, 10);
+    return `${d}-${m}-${y}`;
+  };
+
   // ===============================
   // CARGA Y NORMALIZACIÓN
   // ===============================
@@ -102,11 +109,7 @@ export const ReservaComponent = () => {
       const normalizadosClientes = (clsRaw ?? [])
         .map((c) => ({
           id_cliente: c.id_cliente ?? c.idCliente ?? c.id ?? null,
-          nombrecliente:
-            c.nombrecliente ??
-            c.nombreCliente ??
-            c.nombre_cliente ??
-            "",
+          nombrecliente: c.nombrecliente ?? c.nombreCliente ?? c.nombre_cliente ?? "",
         }))
         .filter((c) => c.id_cliente != null);
 
@@ -123,9 +126,7 @@ export const ReservaComponent = () => {
           (c) => Number(c.id_cliente) === Number(r.id_cliente)
         );
         const mesa = normalizadasMesas.find(
-          (m) =>
-            Number(m.id_mesa) ===
-            Number(r.mesa?.id_mesa ?? r.id_mesa)
+          (m) => Number(m.id_mesa) === Number(r.mesa?.id_mesa ?? r.id_mesa)
         );
 
         return {
@@ -134,8 +135,7 @@ export const ReservaComponent = () => {
           hora: r.hora,
           id_cliente: r.id_cliente,
           mesa: mesa ?? r.mesa,
-          nombre_cliente:
-            r.nombre_cliente ?? cliente?.nombrecliente ?? "Desconocido",
+          nombre_cliente: r.nombre_cliente ?? cliente?.nombrecliente ?? "Desconocido",
           numero_mesa: r.numero_mesa ?? mesa?.numero ?? "—",
           ubicacion_mesa: mesa?.ubicacion ?? "No definida",
           estatus: r.estatus ?? "PENDIENTE",
@@ -145,9 +145,7 @@ export const ReservaComponent = () => {
       // 🔒 Si es CLIENTE, solo puede ver SUS reservas (por nombre de usuario)
       if (esCliente && nombreUsuarioLower) {
         enriched = enriched.filter(
-          (r) =>
-            (r.nombre_cliente || "").toLowerCase() ===
-            nombreUsuarioLower
+          (r) => (r.nombre_cliente || "").toLowerCase() === nombreUsuarioLower
         );
       }
 
@@ -284,7 +282,8 @@ export const ReservaComponent = () => {
   // FILTROS
   // ===============================
   const reservasFiltradas = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const qRaw = search.trim().toLowerCase();
+    const qDigits = onlyDigits(qRaw); // permite "12-12-2025" o "12/12/2025" o "12122025"
     let base = reservas ?? [];
 
     // Filtro de fecha: Hoy / Todas
@@ -292,12 +291,26 @@ export const ReservaComponent = () => {
       base = base.filter((r) => r.fecha === hoyISO);
     }
 
-    return base.filter(
-      (r) =>
-        !q ||
-        r.nombre_cliente.toLowerCase().includes(q) ||
-        String(r.numero_mesa).includes(q)
-    );
+    return base.filter((r) => {
+      if (!qRaw) return true;
+
+      const nombre = (r.nombre_cliente || "").toLowerCase();
+      const mesaNum = String(r.numero_mesa ?? "");
+      const fechaISO = String(r.fecha ?? ""); // "YYYY-MM-DD"
+      const fechaDDMMYYYY = dateISOToDDMMYYYY(fechaISO); // "DD-MM-YYYY"
+
+      // Match por fecha cuando el usuario escribe una fecha (con guiones, slashes, etc.)
+      const fechaDigitsISO = onlyDigits(fechaISO); // YYYYMMDD
+      const fechaDigitsDMY = onlyDigits(fechaDDMMYYYY); // DDMMYYYY
+
+      const matchFecha =
+        qDigits.length >= 6 && // evita que "12" te filtre por fecha accidentalmente
+        (fechaDigitsDMY.includes(qDigits) || fechaDigitsISO.includes(qDigits));
+
+      const matchTexto = nombre.includes(qRaw) || mesaNum.includes(qRaw);
+
+      return matchTexto || matchFecha;
+    });
   }, [reservas, search, filtroFecha, hoyISO]);
 
   // ===============================
@@ -329,9 +342,7 @@ export const ReservaComponent = () => {
             <button
               type="button"
               className={`btn btn-sm ${
-                filtroFecha === "HOY"
-                  ? "btn-primary"
-                  : "btn-outline-primary"
+                filtroFecha === "HOY" ? "btn-primary" : "btn-outline-primary"
               }`}
               onClick={() => setFiltroFecha("HOY")}
             >
@@ -340,9 +351,7 @@ export const ReservaComponent = () => {
             <button
               type="button"
               className={`btn btn-sm ${
-                filtroFecha === "TODAS"
-                  ? "btn-primary"
-                  : "btn-outline-primary"
+                filtroFecha === "TODAS" ? "btn-primary" : "btn-outline-primary"
               }`}
               onClick={() => setFiltroFecha("TODAS")}
             >
@@ -353,7 +362,7 @@ export const ReservaComponent = () => {
           <input
             type="text"
             className="form-control text-dark bg-white"
-            placeholder="Buscar por cliente o mesa…"
+            placeholder="Buscar por cliente, mesa o fecha (12-12-2025)…"
             style={{ minWidth: 240 }}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -423,16 +432,10 @@ export const ReservaComponent = () => {
 
               <div className="d-flex gap-2">
                 <button
-                  className={`btn ${
-                    modoEditar ? "btn-primary" : "btn-success"
-                  }`}
+                  className={`btn ${modoEditar ? "btn-primary" : "btn-success"}`}
                   disabled={saving}
                 >
-                  {saving
-                    ? "Guardando…"
-                    : modoEditar
-                    ? "Actualizar"
-                    : "Agregar"}
+                  {saving ? "Guardando…" : modoEditar ? "Actualizar" : "Agregar"}
                 </button>
 
                 {modoEditar && (
@@ -485,9 +488,7 @@ export const ReservaComponent = () => {
 
                       // 👇 Para CLIENTE: solo botón Confirmar cuando ya es la hora
                       const puedeConfirmarCliente =
-                        esCliente &&
-                        pendiente &&
-                        fechaHoraSuperada(r.fecha, r.hora);
+                        esCliente && pendiente && fechaHoraSuperada(r.fecha, r.hora);
 
                       // ==== ACCIONES PARA TRABAJADOR (no cliente) ====
                       let accionesTrabajador = (
@@ -513,9 +514,7 @@ export const ReservaComponent = () => {
                               {pendiente && (
                                 <button
                                   className="btn btn-sm btn-primary"
-                                  onClick={() =>
-                                    handleConfirmar(r.idReserva)
-                                  }
+                                  onClick={() => handleConfirmar(r.idReserva)}
                                 >
                                   ✔️
                                 </button>
@@ -527,11 +526,7 @@ export const ReservaComponent = () => {
                                   className="btn btn-sm btn-success"
                                   onClick={() =>
                                     navigate(
-                                      `/ventas?idReserva=${
-                                        r.idReserva
-                                      }&idCliente=${
-                                        r.id_cliente
-                                      }&nombreCliente=${encodeURIComponent(
+                                      `/ventas?idReserva=${r.idReserva}&idCliente=${r.id_cliente}&nombreCliente=${encodeURIComponent(
                                         r.nombre_cliente
                                       )}`
                                     )
@@ -545,9 +540,7 @@ export const ReservaComponent = () => {
                               {pendiente && (
                                 <button
                                   className="btn btn-sm btn-outline-danger"
-                                  onClick={() =>
-                                    handleCancelarReserva(r.idReserva)
-                                  }
+                                  onClick={() => handleCancelarReserva(r.idReserva)}
                                 >
                                   Cancelar
                                 </button>
@@ -557,9 +550,7 @@ export const ReservaComponent = () => {
                               {cancelada && (
                                 <button
                                   className="btn btn-sm btn-outline-secondary"
-                                  onClick={() =>
-                                    handleEliminar(r.idReserva)
-                                  }
+                                  onClick={() => handleEliminar(r.idReserva)}
                                 >
                                   Eliminar
                                 </button>
@@ -574,9 +565,7 @@ export const ReservaComponent = () => {
                               <div className="d-flex justify-content-end">
                                 <button
                                   className="btn btn-sm btn-outline-secondary"
-                                  onClick={() =>
-                                    handleEliminar(r.idReserva)
-                                  }
+                                  onClick={() => handleEliminar(r.idReserva)}
                                 >
                                   Eliminar
                                 </button>
@@ -588,9 +577,7 @@ export const ReservaComponent = () => {
                               <div className="d-flex justify-content-end">
                                 <button
                                   className="btn btn-sm btn-outline-danger"
-                                  onClick={() =>
-                                    handleCancelarReserva(r.idReserva)
-                                  }
+                                  onClick={() => handleCancelarReserva(r.idReserva)}
                                 >
                                   Cancelar
                                 </button>
@@ -616,13 +603,9 @@ export const ReservaComponent = () => {
                           <td>{r.hora}</td>
                           <td>
                             {cancelada ? (
-                              <span className="badge bg-danger">
-                                Cancelada
-                              </span>
+                              <span className="badge bg-danger">Cancelada</span>
                             ) : confirmada ? (
-                              <span className="badge bg-success">
-                                Confirmada
-                              </span>
+                              <span className="badge bg-success">Confirmada</span>
                             ) : (
                               <span className="badge bg-warning text-dark">
                                 Pendiente
@@ -640,9 +623,7 @@ export const ReservaComponent = () => {
                                 {puedeConfirmarCliente ? (
                                   <button
                                     className="btn btn-sm btn-success"
-                                    onClick={() =>
-                                      handleConfirmar(r.idReserva)
-                                    }
+                                    onClick={() => handleConfirmar(r.idReserva)}
                                   >
                                     Confirmar
                                   </button>

@@ -20,7 +20,8 @@ import { VentaComponent } from "./components/VentaComponent";
 import { EmpleadoComponent } from "./components/EmpleadoComponent";
 import { ReservaComponent } from "./components/ReservaComponent";
 import LoginPage from "./components/LoginPage";
-import AtenderComponent from "./components/AtenderComponent"; // 👈 nuevo
+import RegisterPage from "./components/RegisterPage"; // ✅ NUEVO
+import AtenderComponent from "./components/AtenderComponent";
 
 import PrivateRoute from "./components/PrivateRoute";
 
@@ -38,7 +39,8 @@ function AppShell() {
   const location = useLocation();
 
   // Rutas donde NO queremos mostrar Header y Footer
-  const hideChrome = location.pathname === "/login";
+  const hideChrome =
+    location.pathname === "/login" || location.pathname === "/registro";
 
   return (
     <>
@@ -47,6 +49,9 @@ function AppShell() {
       <Routes>
         {/* LOGIN (público) */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* REGISTRO (público) */}
+        <Route path="/registro" element={<RegisterPage />} />
 
         {/* RUTAS PROTEGIDAS */}
         <Route
@@ -112,7 +117,6 @@ function AppShell() {
           }
         />
 
-        {/* PEDIDOS / ATENDER (solo roles MESERO / ADMIN a nivel backend) */}
         <Route
           path="/pedidos"
           element={

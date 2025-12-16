@@ -6,6 +6,7 @@ import {
   descargarTicketVenta,
   listarDetalleVentaPorVenta,
   actualizarVenta,
+  listarProductos, // ✅ NUEVO: para cargar todos los productos
 } from "../services/api";
 
 const AtenderComponent = () => {
@@ -48,6 +49,9 @@ const AtenderComponent = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // ✅ NUEVO: catálogo de productos
+  const [productos, setProductos] = useState([]);
+
   // ====== Estado para MODAL de edición ======
   const [showModal, setShowModal] = useState(false);
   const [ventaEditando, setVentaEditando] = useState(null);
@@ -57,6 +61,7 @@ const AtenderComponent = () => {
   useEffect(() => {
     if (!canUse) return;
     cargarVentas();
+    cargarProductos(); // ✅ NUEVO
   }, [canUse]);
 
   const cargarVentas = async () => {
@@ -73,15 +78,30 @@ const AtenderComponent = () => {
     }
   };
 
+  // ✅ NUEVO: cargar todos los productos para el modal
+  const cargarProductos = async () => {
+    try {
+      const ps = await listarProductos();
+      const normalizados = (ps ?? []).map((p) => ({
+        id_producto: p.id_producto ?? p.idProducto ?? p.id ?? null,
+        nombre: p.nombre ?? p.nombreProducto ?? "Producto",
+        precio_unitario: Number(p.precio_unitario ?? p.precioUnitario ?? p.precio ?? 0),
+      })).filter((p) => p.id_producto != null);
+
+      setProductos(normalizados);
+    } catch (err) {
+      console.error("Error cargando productos:", err);
+      // no alert para no ser invasivo
+    }
+  };
+
   // ====== Helpers para info de mesero / fecha ======
 
   const getMeseroNombreFromVenta = (v) => {
-    return (
-      v.empleado?.nombre || // ventas nuevas
+    return v.empleado?.nombre || // ventas nuevas
       v.mesero?.nombre ||
       v.nombreMesero ||
-      ""
-    );
+      "";
   };
 
   const formatFecha = (v) => {
@@ -183,6 +203,11 @@ const AtenderComponent = () => {
         cantidad: Number(d.cantidad ?? 0),
       }));
 
+      // ✅ NUEVO: asegurarnos de tener productos (si aún no cargaron)
+      if (!productos || productos.length === 0) {
+        await cargarProductos();
+      }
+
       setVentaEditando(venta);
       setDetalleEdit(normalizados);
       setShowModal(true);
@@ -201,9 +226,7 @@ const AtenderComponent = () => {
   const incrementarDetalle = (id_detalle) => {
     setDetalleEdit((prev) =>
       prev.map((d) =>
-        d.id_detalle === id_detalle
-          ? { ...d, cantidad: d.cantidad + 1 }
-          : d
+        d.id_detalle === id_detalle ? { ...d, cantidad: d.cantidad + 1 } : d
       )
     );
   };
@@ -212,20 +235,41 @@ const AtenderComponent = () => {
     setDetalleEdit((prev) =>
       prev
         .map((d) =>
-          d.id_detalle === id_detalle
-            ? { ...d, cantidad: d.cantidad - 1 }
-            : d
+          d.id_detalle === id_detalle ? { ...d, cantidad: d.cantidad - 1 } : d
         )
         .filter((d) => d.cantidad > 0)
     );
   };
 
+  // ✅ NUEVO: agregar producto que NO estaba en la venta
+  const agregarProductoANuevaVenta = (p) => {
+    setDetalleEdit((prev) => {
+      const ya = prev.find((d) => Number(d.id_producto) === Number(p.id_producto));
+      if (ya) {
+        // si ya existe, solo incrementa
+        return prev.map((d) =>
+          Number(d.id_producto) === Number(p.id_producto)
+            ? { ...d, cantidad: d.cantidad + 1 }
+            : d
+        );
+      }
+      // si no existe, lo agrega con cantidad 1 (id_detalle null para que el backend lo cree)
+      return [
+        ...prev,
+        {
+          id_detalle: null,
+          id_producto: p.id_producto,
+          nombre: p.nombre,
+          precio_unitario: Number(p.precio_unitario ?? 0),
+          cantidad: 1,
+        },
+      ];
+    });
+  };
+
   const totalEditado = useMemo(
     () =>
-      detalleEdit.reduce(
-        (acc, d) => acc + d.cantidad * d.precio_unitario,
-        0
-      ),
+      detalleEdit.reduce((acc, d) => acc + d.cantidad * d.precio_unitario, 0),
     [detalleEdit]
   );
 
@@ -284,6 +328,16 @@ const AtenderComponent = () => {
       setSavingEdit(false);
     }
   };
+
+  // ✅ NUEVO: productos disponibles para agregar (los que no están ya en detalleEdit)
+  const productosDisponiblesParaAgregar = useMemo(() => {
+    const idsEnDetalle = new Set(
+      (detalleEdit ?? []).map((d) => Number(d.id_producto))
+    );
+    return (productos ?? []).filter(
+      (p) => !idsEnDetalle.has(Number(p.id_producto))
+    );
+  }, [productos, detalleEdit]);
 
   // ====================== RENDER ======================
   if (!canUse) {
@@ -406,7 +460,8 @@ const AtenderComponent = () => {
             <div className="card bg-dark text-light">
               <div className="card-header d-flex justify-content-between align-items-center">
                 <h5 className="m-0">
-                  Modificar venta #{ventaEditando?.id_venta ??
+                  Modificar venta #
+                  {ventaEditando?.id_venta ??
                     ventaEditando?.idVenta ??
                     ventaEditando?.id}
                 </h5>
@@ -420,6 +475,54 @@ const AtenderComponent = () => {
               </div>
 
               <div className="card-body">
+                {/* ✅ NUEVO: lista de productos para agregar */}
+                <div className="mb-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <strong>Agregar productos</strong>
+                    <small className="text-muted">
+                      {productosDisponiblesParaAgregar.length} disponibles
+                    </small>
+                  </div>
+
+                  {productosDisponiblesParaAgregar.length === 0 ? (
+                    <div className="text-muted small mt-1">
+                      No hay más productos para agregar.
+                    </div>
+                  ) : (
+                    <div className="table-responsive mt-2">
+                      <table className="table table-dark table-sm align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th className="text-end">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productosDisponiblesParaAgregar.map((p) => (
+                            <tr key={p.id_producto}>
+                              <td>{p.nombre}</td>
+                              <td>${Number(p.precio_unitario).toFixed(2)}</td>
+                              <td className="text-end">
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-success"
+                                  onClick={() => agregarProductoANuevaVenta(p)}
+                                  disabled={savingEdit}
+                                >
+                                  + Agregar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <hr className="border-secondary" />
+
                 {detalleEdit.length === 0 ? (
                   <p className="text-muted">
                     No hay detalle de productos para esta venta.
@@ -436,16 +539,15 @@ const AtenderComponent = () => {
                     </thead>
                     <tbody>
                       {detalleEdit.map((d) => (
-                        <tr key={d.id_detalle}>
+                        <tr key={`${d.id_detalle ?? "new"}-${d.id_producto}`}>
                           <td>{d.nombre}</td>
                           <td>
                             <div className="d-flex align-items-center gap-1">
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-light"
-                                onClick={() =>
-                                  decrementarDetalle(d.id_detalle)
-                                }
+                                onClick={() => decrementarDetalle(d.id_detalle)}
+                                disabled={savingEdit}
                               >
                                 −
                               </button>
@@ -453,19 +555,15 @@ const AtenderComponent = () => {
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-light"
-                                onClick={() =>
-                                  incrementarDetalle(d.id_detalle)
-                                }
+                                onClick={() => incrementarDetalle(d.id_detalle)}
+                                disabled={savingEdit}
                               >
                                 +
                               </button>
                             </div>
                           </td>
                           <td>${d.precio_unitario.toFixed(2)}</td>
-                          <td>
-                            $
-                            {(d.precio_unitario * d.cantidad).toFixed(2)}
-                          </td>
+                          <td>${(d.precio_unitario * d.cantidad).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
