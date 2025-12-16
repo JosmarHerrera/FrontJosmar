@@ -1,39 +1,29 @@
 // src/services/TipoProductoService.js
-const API_URL = "http://localhost:7070/api/tipo";
-const API_PRODUCTOS = "http://localhost:7070/api/producto";
-
-
+import { API_TIPO, API_PRODUCTO, apiFetch } from "../Service/apiHelper";
 
 export const listarTipos = async () => {
-  const response = await fetch(API_URL);
-  if (!response.ok) throw new Error("Error al listar tipos");
-  return await response.json();
+  return apiFetch(API_TIPO);
 };
 
 export const crearTipo = async (tipo) => {
-  const response = await fetch(API_URL, {
+  return apiFetch(API_TIPO, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(tipo),
   });
-  if (!response.ok) throw new Error("Error al crear tipo");
-  return await response.json();
 };
 
 export const actualizarTipo = async (id, tipo) => {
-  const response = await fetch(`${API_URL}/${id}`, {
+  return apiFetch(`${API_TIPO}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(tipo),
   });
-  if (!response.ok) throw new Error("Error al actualizar tipo");
-  return await response.json();
 };
 
 export const eliminarTipo = async (id) => {
-  const response = await fetch(`${API_URL}/${id}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) throw new Error("Error al eliminar tipo");
-  return await response.text();
+  return apiFetch(`${API_TIPO}/${id}`, { method: "DELETE" });
+};
+
+// (si en algún lado usas API_PRODUCTO desde aquí)
+export const listarProductos = async () => {
+  return apiFetch(API_PRODUCTO);
 };
