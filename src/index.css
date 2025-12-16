@@ -1,0 +1,190 @@
+:root {
+  font-family: "Poppins", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* 🎨 Paleta pastel */
+  --hachi-blue: #a8d8ea;
+  --hachi-pink: #f4b6c2;
+  --hachi-yellow: #fff5b7;
+  --hachi-text: #555555;
+  --hachi-bg: #ffffff;
+
+  color-scheme: light;
+  color: var(--hachi-text);
+  background-color: var(--hachi-bg);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ✨ Enlaces pastel */
+a {
+  font-weight: 500;
+  color: var(--hachi-blue);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--hachi-pink);
+}
+
+/* 🧍‍♀️ Estructura base */
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--hachi-bg);
+  color: var(--hachi-text);
+}
+
+/* ✨ Encabezados */
+h1, h2, h3, h4 {
+  font-weight: 700;
+  text-align: center;
+  color: var(--hachi-text);
+}
+
+h1 {
+  font-size: 2.5em;
+  line-height: 1.2;
+}
+
+/* 🌸 Botones kawaii */
+button {
+  border-radius: 12px;
+  border: 2px solid var(--hachi-blue);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--hachi-blue);
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:hover {
+  background-color: var(--hachi-pink);
+  border-color: var(--hachi-pink);
+  transform: translateY(-2px);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 3px dashed var(--hachi-yellow);
+  outline-offset: 3px;
+}
+
+/* 🌼 Modo responsive */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2em;
+  }
+  button {
+    width: 100%;
+  }
+}
+
+/* ✨ Modo oscuro opcional (por si alguien lo tiene activado) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    background-color: #1b1b1b;
+    color: #eaeaea;
+  }
+  a {
+    color: var(--hachi-blue);
+  }
+  a:hover {
+    color: var(--hachi-pink);
+  }
+  button {
+    background-color: var(--hachi-blue);
+    border-color: var(--hachi-blue);
+    color: white;
+  }
+}
+/* 🌸 Estilo general de tablas kawaii */
+.table-kawaii {
+  background-color: #fffafc;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #444;
+}
+
+/* 🌿 Encabezados */
+.table-kawaii thead {
+  background: linear-gradient(90deg, #b7e0ff, #e2b7ff);
+  color: #444;
+}
+
+.table-kawaii th {
+  text-align: center;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+}
+
+/* 🍡 Filas */
+.table-kawaii tbody tr {
+  transition: background-color 0.3s;
+}
+
+.table-kawaii tbody tr:nth-child(even) {
+  background-color: #f7f7ff;
+}
+
+.table-kawaii tbody tr:hover {
+  background-color: #f0e8ff;
+}
+
+/* ✨ Celdas */
+.table-kawaii td {
+  padding: 10px;
+  text-align: center;
+  vertical-align: middle;
+  border: none;
+}
+
+/* 🌟 Botones dentro de la tabla */
+.table-kawaii .btn {
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  margin: 0 2px;
+  transition: transform 0.2s;
+}
+
+.table-kawaii .btn:hover {
+  transform: scale(1.05);
+}
+
+.btn-edit {
+  background-color: #b7e0ff;
+  color: #444;
+  border: none;
+}
+
+.btn-edit:hover {
+  background-color: #9fd2ff;
+}
+
+.btn-delete {
+  background-color: #e2b7ff;
+  color: #444;
+  border: none;
+}
+
+.btn-delete:hover {
+  background-color: #d5a2ff;
+}
