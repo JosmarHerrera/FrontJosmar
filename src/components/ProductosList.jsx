@@ -9,7 +9,7 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-const BASE_IMG_URL = "http://localhost:7071/uploads/";
+const BASE_IMG_URL = "https://fondajosmar-production.up.railway.app/uploads/";
 
 export default function ProductosList() {
   const { user } = useAuth();
