@@ -1,30 +1,26 @@
 // src/Service/apiHelper.js
 
-// (Opcional) Si más adelante usas Spring Cloud Gateway u otro:
-export const API_GATEWAY = "http://localhost:7070";
+export const API_GATEWAY = ""; // (no usado por ahora)
 
-// ==== AUTH / MICRO RESTAURANTE (8080) ====
-export const API_AUTH_BASE = "http://localhost:8080/auth"; // login / registro
-export const API_CLIENTES  = "http://localhost:8080/api/cliente";
+// ==== AUTH / MICRO RESTAURANTE ====
+export const API_AUTH_BASE = "https://compassionate-dedication-production.up.railway.app/auth";
+export const API_CLIENTES  = "https://compassionate-dedication-production.up.railway.app/api/cliente";
 
-// ==== MICRO RESERVACIONES (6060) ====
-export const API_EMPLEADOS = "http://localhost:6060/api/empleado";
-export const API_MESAS     = "http://localhost:6060/api/mesa";
-export const API_RESERVAS  = "http://localhost:6060/api/reserva";
-export const API_ATENDER   = "http://localhost:6060/api/atender"; // por si lo usas
+// ==== MICRO RESERVACIONES ====
+export const API_EMPLEADOS = "https://reservasjosmar-production.up.railway.app/api/empleado";
+export const API_MESAS     = "https://reservasjosmar-production.up.railway.app/api/mesa";
+export const API_RESERVAS  = "https://reservasjosmar-production.up.railway.app/api/reserva";
+export const API_ATENDER   = "https://reservasjosmar-production.up.railway.app/api/atender";
 
-// ==== MICRO FONDA (7071) ====
-export const API_PRODUCTO        = "http://localhost:7071/api/producto";
-export const API_TIPO            = "http://localhost:7071/api/tipoproducto";
-export const API_VENTA           = "http://localhost:7071/api/venta";
-export const API_DETALLE_VENTA   = "http://localhost:7071/api/detalleventa";
+// ==== MICRO FONDA ====
+export const API_PRODUCTO      = "https://fondajosmar-production.up.railway.app/api/producto";
+export const API_TIPO          = "https://fondajosmar-production.up.railway.app/api/tipoproducto";
+export const API_VENTA         = "https://fondajosmar-production.up.railway.app/api/venta";
+export const API_DETALLE_VENTA = "https://fondajosmar-production.up.railway.app/api/detalleventa";
 
 // ==== HELPER UNIVERSAL ====
-// src/Service/apiHelper.js
-
 export async function apiFetch(url, options = {}) {
   const token = localStorage.getItem("token");
-
   const isFormData = options.body instanceof FormData;
 
   const headers = {
@@ -32,53 +28,40 @@ export async function apiFetch(url, options = {}) {
     ...options.headers,
   };
 
-  // Solo ponemos Content-Type cuando NO es FormData
   if (!isFormData && !headers["Content-Type"] && !headers["content-type"]) {
     headers["Content-Type"] = "application/json";
   }
 
   const response = await fetch(url, { ...options, headers });
 
-  // Leemos el body UNA sola vez
   const contentType = response.headers.get("content-type") || "";
   const raw = await response.text().catch(() => "");
 
   if (!response.ok) {
     let msg = "";
-
     if (contentType.includes("application/json")) {
       try {
         const obj = raw ? JSON.parse(raw) : null;
-        msg =
-          obj?.message ||
-          obj?.error ||
-          raw ||
-          `Error ${response.status}`;
+        msg = obj?.message || obj?.error || raw || `Error ${response.status}`;
       } catch {
         msg = raw || `Error ${response.status}`;
       }
     } else {
-      // texto plano: "Empleado ya existe", stacktrace, etc.
       msg = raw || `Error ${response.status}`;
     }
-
     console.error("Error en API:", response.status, raw);
     throw new Error(msg);
   }
 
-  // Si no hay contenido
   if (!raw) return null;
 
-  // Si es JSON lo intentamos parsear
   if (contentType.includes("application/json")) {
     try {
       return JSON.parse(raw);
-    } catch (e) {
-      console.warn("Respuesta no es JSON válido, devolviendo texto:", raw);
+    } catch {
       return raw;
     }
   }
 
-  // Si no es JSON, regresamos el texto tal cual
   return raw;
 }
